@@ -200,6 +200,13 @@ tab new_grade, m
 mdesc gpa_course quality_points hours_attempted
 
 
+* Generating a class size variable
+gen tempcount = 1
+egen course_size = sum(tempcount), by(institution snapshot_term crn_id course_abbreviation section_number)
+label var course_size "Count of number of students in same section"
+drop tempcount
+//sort institution snapshot_term crn_id course_abbreviation section_number course_size
+//browse institution student_pidm snapshot_term crn_id course_abbreviation section_number course_size
 
 
 //saving current file

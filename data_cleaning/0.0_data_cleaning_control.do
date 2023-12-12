@@ -14,6 +14,8 @@ predict course letter grades.
 	version 17.0
 	capture log close
 	set more off
+	
+	set seed 1234
 
 ********************************************************************************
 * Setting file path
@@ -44,6 +46,10 @@ global rawdata "/proj/ncefi/uncso/rawdata-stata/new_uncso_data"
 * 5 Student Level Course Summaries
 	
 	do "${proj}/randomforest/0.1_student_level_course_summaries.do"
+
+* 6 Instructor summaries
+	
+	do "${proj}/randomforest/0.1_instructor_summaries.do"
 
 * Creating an analytic file
 

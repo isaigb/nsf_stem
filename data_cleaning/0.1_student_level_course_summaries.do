@@ -1,5 +1,9 @@
 ********************************************************************************
-* 5 Making student level course summaries
+* 5 Making student level course summaries (this title likley inaccurate now)
+* start with student-course level data, end with student-term data
+/*
+Makes student-semester cumulative means and standard deviations
+*/
 ********************************************************************************
 use "${proj}/data/rf_courselevel_temp.dta", clear
 
@@ -10,64 +14,64 @@ gen obs = 1
 
 drop if credit_hours == 0 | credit_hours == .
 
-// num of courses taken per semester
-egen sem_course_count = sum(obs) , by(newid institution termyear sortterm)
-// sum of gpa's in semester
-egen sem_sum_gpa = sum(gpa_course), by(newid institution termyear sortterm)
-
-// avg gpa based on number of courses taken
-gen sem_mean_gpa = sem_sum_gpa / sem_course_count
-
-// de-meaned course GPA then squared
-gen demeaned_gpa = (gpa_course - sem_mean_gpa) ^ 2
-
-// sum of squared deviations
-egen sum_squared_dev = sum(demeaned_gpa) , by(newid institution termyear sortterm) 
 
 
+/*
+Creating a GPA standard deviation variable that is cumulative up to the current 
+term
+*/
+
+* Variable that counts terms
+	sort newid termyear sortterm institution
+
+	bysort newid termyear sortterm institution : gen terms = _n == 1 
+	by newid: replace terms = sum(terms)
+
+* Max terms
+	egen max_terms = max(terms) , by(newid)
+
+* GPA mean and SD per term 
+	egen sem_gpa_mean = mean(gpa_course), by(newid institution termyear sortterm)
+	egen sem_gpa_sd = sd(gpa_course), by(newid institution termyear sortterm)
 
 
-egen sem_gpa_mean = mean(gpa_course), by(newid institution termyear sortterm)
-egen sem_gpa_sd = sd(gpa_course), by(newid institution termyear sortterm)
+	
+	
+* Doing this over a loop
+	gen cum_gpa_mean = .
+	gen cum_gpa_sd = .
+	
+	quietly sum terms
+	local max = r(max)
+	
+	forvalues i = 1/ `max' { 
+		tempvar store_mean store_sd
+		
 
+		di "Starting `i'"
+		egen `store_mean' = mean(gpa_course) if terms <= `i' & `i' <= max_terms, by(newid institution)
+		
+		replace cum_gpa_mean = `store_mean' if terms == `i'
+		
+		
+		
+		egen `store_sd' = sd(gpa_course) if terms <= `i' & `i' <= max_terms, by(newid institution)
+		
+		replace cum_gpa_sd = `store_sd' if terms == `i'
+	}
+* dropping vars that must be dropped, not available in typical dataset
+	drop max_terms
+* Deduplicating data to keep single row per student-term-inst
+	//duplicates report newid institution termyear sortterm
+	duplicates drop newid institution termyear sortterm, force
 
+* Generating lag vars
+	sort newid institution termyear sortterm
+	foreach var in cum_gpa_mean cum_gpa_sd {
+		bysort newid institution (termyear sortterm): gen lag_`var' = `var'[_n-1]
+	}
 
-
-bysort newid institution termyear sortterm: gen terms = _n
-
-sort newid institution termyear sortterm
-
-egen term_completion_order = group(newid institution termyear sortterm)
-
-bysort newid institution termyear sortterm)
-
-
-
-
-
-
-
-
-
-
-
-
-// dropping duplicates
-
-duplicates report newid institution termyear sortterm
-duplicates drop newid institution termyear sortterm, force
-
-drop credit_hours credit_hours_char hours_attempted credit_hours_enrolled quality_points gpa_course term_hrs_attempt_all term_points_earn_all
-sort newid institution termyear sortterm
-
-bysort newid institution (termyear sortterm): gen cum_courses_num = sum(sem_course_count)
-bysort newid institution (termyear sortterm): gen cum_sum_gpa = sum(sem_sum_gpa)
-gen cum_mean_gpa = cum_sum_gpa / cum_courses_num
-
-gen cum_gpa_sd = sqrt(((cum_sum_gpa - cum_mean_gpa) ^ 2) / cum_courses_num)
-
-* incorrect, need to subtract mean gpa from all individual courses then square and sum
-
-// bysort loops over the sorted obs
-* Lagged (-1) deviation from cumulative GPA (-2)
-* Lagged cumulative standard deviation
+* Keeping vars (might not need this if I move this code over to the larger student-course to student-term summaries file)
+	keep newid termyear sortterm institution terms lag_cum_gpa_mean lag_cum_gpa_sd
+* Saving
+	save "${proj}/data/rf_student-term_gpa_mean_sd_formerge.dta", replace

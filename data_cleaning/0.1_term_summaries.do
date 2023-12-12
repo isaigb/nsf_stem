@@ -203,7 +203,7 @@ use "${proj}/data/rf_courselevel_temp.dta", clear
 	
 	
 	
-	
+
 	duplicates drop newid institution snapshot_term course_cip_code, force
 	
 	// browse newid institution snapshot_term credit_hours quality_points course_abbreviation section_title course_cip_code term_*
@@ -264,7 +264,7 @@ use "${proj}/data/rf_courselevel_temp.dta", clear
 	
 	
 	
-// TO DO IF NEEDED: calculate STEM and Non-stem specific GPA with same rules
+// TODO IF NEEDED: calculate STEM and Non-stem specific GPA with same rules
 	
 
 	
