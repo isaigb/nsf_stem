@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Created on Wed Jul  5 14:38:08 2023
 
@@ -20,6 +18,7 @@ import math
 import time
 
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as grid_spec
 
 import utils
 
@@ -41,8 +40,7 @@ df, df_summary, sorting_ids, x_train, x_test, y_train, y_test = utils.import_tra
 
 # RF regressor
 base_RF_reg = RandomForestRegressor(bootstrap = True, 
-                                 random_state = utils.SEED, 
-                                 verbose = 3, 
+                                 random_state = utils.SEED,
                                  n_jobs = -1, 
                                  max_features= 'sqrt', 
                                  criterion = 'squared_error')
@@ -53,8 +51,11 @@ count_obs = round(x_train.shape[0] * (4/5))
 
 def gridcv_rf_reg():
     # Defining the search grid
+    # searchgrid = {'n_estimators':[125, 350], 
+    #               'max_samples':[count_obs, round(count_obs/2)]}
+    
     searchgrid = {'n_estimators':[125, 350], 
-                  'max_samples':[count_obs, round(count_obs/2)]}
+                   'min_samples_leaf':[2,5]}
 
     cvsearch = GridSearchCV(base_RF_reg, searchgrid,
                              cv=5, 
@@ -73,6 +74,16 @@ def gridcv_rf_reg():
 
     # Saving results to CSV
     search_results.to_excel("/proj/ncefi/uncso/projects/nsf_stem/randomforest/rf_regressionCV.xlsx",)
+    
+
+
+
+
+
+
+
+
+
 
 
 
@@ -113,6 +124,64 @@ def gridcv_lasso():
 
 
 
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# AdaBoostRegressor with manual CV
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# given non-normally distributed errors in RF regression, will try AdaBoostRegressor
+# which uses gradient of trees to make better subsequent trees
+# model requires tuning, never predicted zero's
+# tune loss, learning_rate, number of trees
+from sklearn.ensemble import AdaBoostRegressor
+
+adaboost = AdaBoostRegressor(estimator = None, n_estimators= 50, 
+                             learning_rate= 1.0, loss = 'square', 
+                             random_state= utils.SEED)
+
+adaboost_reg_yhat = cross_val_predict(adaboost, X= x_train, y= y_train, cv = 5, method= 'predict')
+# check errors overall and for subgroups, plot errors, convert to grades and make confusion matrix
+    
+# convert to categoricals
+
+# Create confusion matrix and report
+utils.report_and_plot_rf(model= adaboost, 
+                   true_y= grade_ytrue, 
+                   predicted_y= grade_yhat, 
+                   label_dict= labels.classes_, 
+                   save_path= utils.my_save_path, 
+                   fig_name="adaboost_reg2class")
+
+
+# work with the errors
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# ExtraTreesRegressor with manual CV
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+
+from sklearn.ensemble import ExtraTreesRegressor
 
 
 

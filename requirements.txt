@@ -1,0 +1,32 @@
+# interactive python and ipynb support
+jupyter
+ipykernel
+
+# data analysis and ML libraries
+pandas
+numpy
+scipy
+statsmodels
+scikit-learn
+imbalanced-learn
+xgboost
+
+# plotting
+matplotlib
+plotly
+seaborn
+
+# nn and nlp libraries
+torch
+tensorflow
+keras
+transformers
+nltk
+# gensim is installed in separate command
+
+# web libraries
+beautifulsoup4
+lxml
+selenium
+requests
+

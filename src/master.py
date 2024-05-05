@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 This is the master script that runs through training, validation, and final model creation.
 
@@ -14,6 +12,8 @@ import explore_regression
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 # TODO: add tuning script
 # TODO: add prediction step
+
+explore_classification.cv_balanced_rf()
 
 # Rerunning classification models
 explore_classification.rerun()

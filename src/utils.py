@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 This file defines constants and data importing and figure generating functions 
 that will be used in other parts of the project.
@@ -13,14 +11,15 @@ import pandas as pd
 import time
 
 
-# Defining the project file path as object
-my_save_path = "/proj/ncefi/uncso/projects/nsf_stem/randomforest/"
+# Defining the project file paths
+my_save_path = "/proj/ncefi/uncso/projects/nsf_stem/DEV_nsf_stem/"
+fig_path = "/proj/ncefi/uncso/projects/nsf_stem/DEV_nsf_stem/figures/"
 
 # Defining the seed for use in randomizers for this project
 SEED = 1234
 
 
-def report_and_plot_rf(model, true_y, predicted_y, label_dict, save_path, fig_name):
+def report_and_plot_rf(model, true_y, predicted_y, label_dict, save_path, fig_name, file_time_stamp = False, dpi = 600):
     """
     Helper function that prints a classification report and generates + exports a confusion matrix plot.
 
@@ -61,14 +60,18 @@ def report_and_plot_rf(model, true_y, predicted_y, label_dict, save_path, fig_na
     print(balanced_report)
     
     # Creating the figure    
-    CM_figure = ConfusionMatrixDisplay(confusion_matrix=confusion_mat_raw, display_labels=label_dict)
+    # TODO clean this up
+    CM_figure = ConfusionMatrixDisplay.from_predictions(y_true = true_y, y_pred = predicted_y, display_labels = label_dict, normalize = 'true')
     CM_figure.plot()
     #adding the full command as title
     CM_figure.ax_.set_title(f'{model}', loc='center')
-    # Saving to path with timestamp in figure name
-    current_time = time.strftime("%Y%m%d-%H%M%S")
+    # Checking for inclusion of timestamp
+    current_time = ""
+    if file_time_stamp == True: 
+        current_time = time.strftime("%Y%m%d-%H%M%S")
+    # saving
     CM_figure.figure_.savefig(f'{save_path + fig_name + "_" + current_time + ".png"}', 
-                                  dpi=600,  
+                                  dpi= dpi,  
                                   format='png',
                                   bbox_inches= 'tight')
 
@@ -169,3 +172,88 @@ def import_training_data(grading= 'whole_letter', test_size= 0.30):
         return_list.append(labels)
     
     return return_list
+
+
+
+# helper function converting from points to GPA
+# currently not working
+def point2gpa(points, x_data):
+    gpa = points/x_data['credit_hours']
+    return gpa
+
+
+# helper function converting from points to grades, modeled after https://registrar.unc.edu/academic-services/grades/explanation-of-grading-system/
+def gpa2letter(gpa, grading = 'whole_letter', boundary_type = 'prediction'):
+    """
+    Helper function converting predicted 'quality points' to grades.
+    
+    Modeled after the UNC grading system ( https://registrar.unc.edu/academic-services/grades/explanation-of-grading-system/).
+    Takes the midpoint between the letter grade GPA boundaries for conversion.
+    """
+    # setting up bins and labels
+    if ((grading == 'full_letter') and (boundary_type  == 'prediction')):
+        bins = [-100, 0.5-1e-5, 1.15-1e-5, 1.5-1e-5, 1.85-1e-5, 2.15-1e-5, 2.5-1e-5, 2.85-1e-5, 3.15-1e-5, 3.5-1e-5, 3.85-1e-5, 4.15-1e-5, 100]
+        labels = ['F', 'D', 'D+', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+']
+        
+    elif ((grading == 'full_letter') and (boundary_type  == 'true')):
+        bins = [-100, 0.0+1e-5, 1.0+1e-5, 1.3+1e-5, 1.7+1e-5, 2.0+1e-5, 2.3+1e-5, 2.7+1e-5, 3.0+1e-5, 3.3+1e-5, 3.7+1e-5, 4.0+1e-5, 100]
+        labels = ['F', 'D', 'D+', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+']
+        
+    elif ((grading == 'whole_letter') and (boundary_type  == 'prediction')):
+        bins = [-100, 0.5-1e-5, 1.5-1e-5, 2.5-1e-5, 3.5-1e-5, 100]
+        labels = ['F', 'D', 'C', 'B','A']
+    
+    elif ((grading == 'whole_letter') and (boundary_type  == 'true')):
+        bins = [-100, 0.0+1e-5, 1.3+1e-5, 2.3+1e-5, 3.3+1e-5, 100]
+        labels = ['F', 'D', 'C', 'B', 'A']
+    
+    # Converting
+    letters = pd.cut(gpa, bins = bins, labels = labels, include_lowest= True)
+    
+    # Returning letters
+    return letters
+
+
+
+# make this more general, able to calculate errors for letters AND GPA's.
+# working with regression errors
+def append_gpa_letters_errors(x_data, y_true, y_hat, grading = 'whole_letter'):
+    outframe = x_data.copy(deep = True)
+    # calculates gpa from predictions
+    gpa_yhat = point2gpa(points= y_hat, x_data= x_data)
+    # calculates gpa from true  points
+    gpa_ytrue = point2gpa(points= y_true, x_data = x_data)
+    
+    errors = gpa_yhat - gpa_ytrue
+    
+    grade_yhat = gpa2letter(gpa= gpa_yhat, grading= grading, boundary_type= 'prediction')
+    grade_ytrue =  gpa2letter(gpa= gpa_ytrue, grading= grading, boundary_type= 'true')
+    
+    labels = LabelEncoder().fit(grade_ytrue)
+    print(f'Classes in Y are: {labels.classes_}')
+    grade_ytrue = labels.transform(grade_ytrue)
+    grade_yhat = labels.transform(grade_yhat)
+    
+    outframe['gpa_ytrue'] = gpa_ytrue
+    outframe['gpa_yhat'] = gpa_yhat
+    outframe['grade_ytrue'] = grade_ytrue
+    outframe['grade_yhat'] = grade_yhat
+    outframe['gpa_errors'] = errors
+    
+    return outframe, labels
+
+
+
+# to see histogram of awarded GPA's: results[results['gpa_ytrue']<5]['gpa_ytrue'].hist(bins=50)
+
+
+
+
+# Making ridgeplots for regression
+
+
+# to see quality points above standard df[df['quality_points']>12]['quality_points'].hist()
+# for description df[df['quality_points']>12]['quality_points'].describe()
+# to get counts df[df['quality_points']>12]['quality_points'].value_counts()
+
+
