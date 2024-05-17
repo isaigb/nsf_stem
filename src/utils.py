@@ -1,6 +1,7 @@
 """
-This file defines constants and data importing and figure generating functions 
-that will be used in other parts of the project.
+This file defines constants and helper functions for data importing, figure 
+generation, and letter grade to point conversion. These are utilized throughout
+the project.
 """
 
 from sklearn.model_selection import train_test_split
@@ -177,6 +178,7 @@ def import_training_data(grading= 'whole_letter', test_size= 0.30):
 
 # helper function converting from points to GPA
 # currently not working
+# TODO
 def point2gpa(points, x_data):
     gpa = points/x_data['credit_hours']
     return gpa
@@ -215,7 +217,7 @@ def gpa2letter(gpa, grading = 'whole_letter', boundary_type = 'prediction'):
 
 
 
-# make this more general, able to calculate errors for letters AND GPA's.
+# TODO make this more general, able to calculate errors for letters AND GPA's.
 # working with regression errors
 def append_gpa_letters_errors(x_data, y_true, y_hat, grading = 'whole_letter'):
     outframe = x_data.copy(deep = True)
@@ -244,16 +246,53 @@ def append_gpa_letters_errors(x_data, y_true, y_hat, grading = 'whole_letter'):
 
 
 
-# to see histogram of awarded GPA's: results[results['gpa_ytrue']<5]['gpa_ytrue'].hist(bins=50)
+# helper function for making and placing histograms in a matplotlib sublot. Works with letter grade predictions or errors.
+def histhelper(ax, xloc, yloc, data, xtype = 'errors', title= '', histtype = 'bar', density = True):
+    """
+    Helper function that constructs a single histogram and places it at subplot position xloc, yloc.
+    
+    It is set to plot errors by default but can plot letter grades.
+
+    Args:
+        ax (matplotlib.axes.Axes): The returned axes object from a matplotlib.plots.subplots() call.
+        xloc (int): Int representing the row in which to place histogram.
+        yloc (int): Int representing the column in which to place histogram.
+        data (pandas.DataFrame): A Pandas dataframe.
+        xtype (str, optional): Select whether plot is for 'errors' or 'grades'. Defaults to 'errors'.
+        title (str, optional): Title for subplot, not entire plot. Defaults to empty string.
+        histtype (str, optional): Select bar or step histogram. Step is outline of hist, no fill. Defaults to 'bar'.
+        density (bool, optional): When False, Y axis is count, when True Y axis is percentage of total. Defaults to True.
+    """
+    if xtype == 'errors':
+        ticks = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
+        labels = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
+    if xtype == 'grades': 
+        ticks = [-1, 0, 1, 2, 3, 4]
+        labels = ['', 'A', 'B', 'C', 'D', 'F']
+    ax[xloc, yloc].hist(data, bins = [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5], rwidth = 0.75, align = 'mid', histtype = histtype, density = density)
+    ax[xloc, yloc].set_title(title)
+    # sets x axis min/max
+    if xtype =='errors':
+        ax[xloc, yloc].set_xlim(-5, 5)
+    if xtype == 'grades':
+        ax[xloc, yloc].set_xlim(-1, 5)
+    ax[xloc, yloc].set_xticks(ticks, labels)
 
 
-
-
-# Making ridgeplots for regression
-
-
-# to see quality points above standard df[df['quality_points']>12]['quality_points'].hist()
-# for description df[df['quality_points']>12]['quality_points'].describe()
-# to get counts df[df['quality_points']>12]['quality_points'].value_counts()
-
-
+# A helper function for moving to the next subplot position, will require a pre-initialized variable that stores
+# the current position. Raises an exception if out of bounds.
+def next_subplot_position(current_row_pos, current_column_pos, max_rows, max_columns):
+    # checks that current column position can be incremented by 1 without going out of bounds, then increments by 1
+    if current_column_pos < max_columns-1:
+        current_column_pos += 1
+    # Checks that the column position is at max position or out of bounds,
+    # also checks that row position can be incremented by 1 without going out of bounds,
+    # then sets column position to 0 (left most position) and increments row position by 1.
+    elif ((current_column_pos >= max_columns-1) and (current_row_pos < max_rows - 1)):
+        current_column_pos = 0
+        current_row_pos += 1
+    # Raises an exception if next position will exceed both rows and columns.
+    else:
+        raise Exception("Next position is out of bounds. Consider making a subplots object with more rows or columns.")
+    # returns an updated row and column position
+    return current_row_pos, current_column_pos

@@ -1,5 +1,5 @@
 """
-Trains models and generates figures for the AEFP 2024 conference.
+Trains balanced random forest model and generates figures for the AEFP 2024 conference.
 """
 
 import utils
@@ -11,46 +11,15 @@ import numpy as np
 
 from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report
+from utils import histhelper, next_subplot_position
 
 
 # Setting up, getting data and defining functions
 df, df_summary, sorting_ids, x_train, x_test, y_train, y_test, labels = utils.import_training_data(grading= 'whole_letter')
 
-# helpfer function
-# TODO: move to utils, make this file call utils.histhelper
-def histhelper(ax, xloc, yloc, data, xtype = 'errors', title= '', histtype = 'bar', density = True):
-    """
-    Helper function that constructs a single histogram plotting errors or grade distributions.
-
-    Args:
-        ax (matplotlib.axes.Axes): The returned axes object from a matplotlib.plots.subplots() call.
-        xloc (int): Int representing the row in which to place histogram.
-        yloc (int): Int representing the column in which to place histogram.
-        data (pandas.DataFrame): A Pandas dataframe.
-        xtype (str, optional): Select whether plot is for 'errors' or 'grades'. Defaults to 'errors'.
-        title (str, optional): Title for subplot, not entire plot. Defaults to empty string.
-        histtype (str, optional): Select bar or step histogram. Step is outline of hist, no fill. Defaults to 'bar'.
-        density (bool, optional): When False, Y axis is count, when True Y axis is percentage of total. Defaults to True.
-    """
-    if xtype == 'errors':
-        ticks = [-4, -3, -2, -1, 0, 1, 2, 3, 4]
-        labels = ['-4', '-3', '-2', '-1', '0', '1', '2', '3', '4']
-    if xtype == 'grades': 
-        ticks = [-1, 0, 1, 2, 3, 4]
-        labels = ['', 'A', 'B', 'C', 'D', 'F']
-    ax[xloc, yloc].hist(data, bins = [-4.5, -3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5, 4.5], rwidth = 0.75, align = 'mid', histtype = histtype, density = density)
-    ax[xloc, yloc].set_title(title)
-    # sets x axis min/max
-    if xtype =='errors':
-        ax[xloc, yloc].set_xlim(-5, 5)
-    if xtype == 'grades':
-        ax[xloc, yloc].set_xlim(-1, 5)
-    ax[xloc, yloc].set_xticks(ticks, labels)
-
-
-
-
+# # # # # # # # # # # # # # # # # # # # 
 # # Naive classifier plots
+# # # # # # # # # # # # # # # # # # # # 
 naive_modal_yhat, naive_stratified_yhat, naive_uniform_yhat, naive_predict_b_yhat, naive_predict_c_yhat = explore_classification.get_naive_predictions()
 
 # Names for naive models
@@ -65,7 +34,7 @@ naive_predictions = [naive_modal_yhat,
                      naive_stratified_yhat, 
                      naive_uniform_yhat]
 
-
+# Defining max rows, columns, and position for first plot (row 0, column 0)
 ncolumns = 2
 nrows = 3
 r = 0
@@ -76,101 +45,34 @@ for i, desc in zip(naive_predictions, naive_titles):
     confusion_mat_raw = confusion_matrix(y_train, i, normalize='true')
     confusion_mat_raw = confusion_matrix(y_train, i)
     
-    
     # plot the confusion matrix
     histaxes[r, c].set_title(desc)
     ConfusionMatrixDisplay.from_predictions(y_train, i, display_labels = labels.classes_, normalize = 'true').plot(ax = histaxes[r, c])
     
-    # next portion ensures subsequent plots move from right to left, top to bottom
-    if c < ncolumns-1:
-        c += 1
-    elif ((c >= ncolumns-1) and (r < nrows - 1)):
-        c = 0
-        r += 1
-    else: break
+    # Moving to next plot position, but breaking the loop if next position is out of bounds
+    try:
+        r, c = next_subplot_position(r, c, nrows, ncolumns)
+    except:
+        break
 
+    # calculating errors and plotting histogram
     errors  = y_train - i
     histhelper(ax = histaxes, xloc = r, yloc= c, data = errors, title = desc)
     
-    # next portion ensures subsequent plots move from right to left, top to bottom
-    if c < ncolumns-1:
-        c += 1
-    elif ((c >= ncolumns-1) and (r < nrows - 1)):
-        c = 0
-        r += 1
-    else: break
+    # moving to next plot position
+    try:
+        r, c = next_subplot_position(r, c, nrows, ncolumns)
+    except:
+        break
+# Once loop is complete, setting y axis, title, and saving figure
 histaxes[0, 1].set_ylim(0, 0.75)
 histfig.suptitle('Distribution of Prediction Errors for Naive Models', fontsize=16)
 histfig.savefig(f'{utils.fig_path}aefp_naivemodels_cm_errors.png', dpi=300, bbox_inches='tight', format= 'png')
 
-# ======================
-# commenting out this block for now, don't need
-# # titles for plots
-# naive_titles = ["Predicts Most Common", 
-#                 "Randomly Samples Stratified Distribution", 
-#                 "Randomly Samples from Uniform Distribution", 
-#                 "Predicts B's", 
-#                 "Predicts C's"]
-# # list of predictions
-# naive_predictions = [naive_modal_yhat, 
-#                      naive_stratified_yhat, 
-#                      naive_uniform_yhat, 
-#                      naive_predict_b_yhat, 
-#                      naive_predict_c_yhat]
 
-# # list of confusion matrices
-# naive_confusion_mats = []
-# for i, desc in zip(naive_predictions, naive_titles):
-#     confusion_mat_raw = confusion_matrix(y_train, i, normalize='true')
-#     naive_confusion_mats.append(confusion_mat_raw)
-#     # add reports here?
-#     # add balanced accuracy here? append into a single large csv?
-#     # Creating a classification report
-#     report = classification_report(y_train, i, target_names = labels.classes_)
-#     print(f'Classification report: {desc}')
-#     print(report)
-
-#     # Balanced accuracy scores
-#     balanced_report = balanced_accuracy_score(y_train, i)
-#     print(f'Balanced Accuracy Score: {desc}')
-#     print(balanced_report)
-    
-#     # Creating the figure    
-#     CM_figure = ConfusionMatrixDisplay(confusion_matrix=confusion_mat_raw, display_labels=labels.classes_)
-#     CM_figure.plot()
-#     #adding the full command as title
-#     CM_figure.ax_.set_title(f'{desc}', loc='center')
-    
-    
-# # making histograms
-# # setting up figure
-# ncolumns = 2
-# nrows = 3
-# r = 0
-# c = 0
-# histfig, histaxes = plt.subplots(nrows, ncolumns,  figsize = (5,4), tight_layout = True)
-# for i, desc in zip(naive_predictions, naive_titles):
-#     errors  = y_train - i
-#     histhelper(ax = histaxes, xloc = r, yloc= c, data = errors, title = desc)
-    
-#     # next portion ensures subsequent plots move from right to left, top to bottom
-#     if c < ncolumns-1:
-#         c += 1
-#     elif ((c >= ncolumns-1) and (r < nrows - 1)):
-#         c = 0
-#         r += 1
-#     else: break
-# histfig.suptitle('Distribution of Prediction Errors for Naive Models', fontsize=16)
-# histfig.savefig(f'{utils.fig_path}aefp_hist_errorsbyrace.png', dpi=300, bbox_inches='tight', format= 'png')
-# ===============
-
-
-
-
-
-
-
-
+# # # # # # # # # # # # # # # # # # # # 
+# # Our model plots
+# # # # # # # # # # # # # # # # # # # # 
 # Training a balanced Random Foreest using 5-fold CV
 # Generating predictions on left-out sets, all training obs get a turn as left out set.
 # Returning predictions which are an approximation of test-set performance
@@ -253,14 +155,11 @@ c = 0
 histfig, histaxes = plt.subplots(nrows, ncolumns, sharex= False, tight_layout = False, figsize=(13, 8.5), sharey = 'all')
 for inst in range(len(results['institution_id'])):
     histhelper(ax = histaxes, xloc = r, yloc= c, data = results[results['institution_id'] == inst+1]['errors'], title = f'Inst. {inst + 1}')
-    # Advances row/column indexes, first moving to the right along the same row,
-    # then starting over in first colum of next row.
-    if c < ncolumns-1:
-        c += 1
-    elif ((c >= ncolumns-1) and (r < nrows - 1)):
-        c = 0
-        r += 1
-    else: break
+    # Advances row/column indexes breaks when we go out of bounds
+    try:
+        r, c = next_subplot_position(r, c, nrows, ncolumns)
+    except:
+        break
 histaxes[0, 0].set_ylim(0, 0.75)
 histfig.suptitle('Distribution of Prediction Errors by Institution', fontsize=40)
 histfig.savefig(f'{utils.fig_path}aefp_hist_errorsbyinst.png', dpi=300, bbox_inches='tight', format= 'png')
@@ -287,13 +186,11 @@ histfig, histaxes = plt.subplots(nrows, ncolumns, sharex= False, tight_layout = 
 for i in range(len(race)):
     num, label = race[i] # unpacking tuple at position i
     histhelper(ax = histaxes, xloc = r, yloc= c, data = results[results['stdnt_race_encode'] == num]['errors'], title = label)
-    # next portion ensures subsequent plots move from right to left, top to bottom
-    if c < ncolumns-1:
-        c += 1
-    elif ((c >= ncolumns-1) and (r < nrows - 1)):
-        c = 0
-        r += 1
-    else: break
+    # advances position in subplot, breaks when out of bounds
+    try:
+        r, c = next_subplot_position(r, c, nrows, ncolumns)
+    except:
+        break
 histaxes[0, 0].set_ylim(0, 0.75)
 histfig.suptitle('Distribution of Prediction Errors by Student Race', fontsize=40)
 histfig.savefig(f'{utils.fig_path}aefp_hist_errorsbyrace.png', dpi=300, bbox_inches='tight', format= 'png')

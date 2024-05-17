@@ -10,9 +10,9 @@ This work is ongoing, and this repo is not updated live.
 
 
 ## Organization
-The `./data_cleaning/` folder contains all `.do` files used to clean the training data. The entire procedure can be completed by running the `./data_cleaning/0.0_data_cleaning_control.do` file.
+The [`./data-cleaning/`](./data-cleaning/) folder contains all Stata `.do` files used to clean the training data. The entire procedure can be completed by running the [`./data-cleaning/0.0_data_cleaning_control.do`](./data-cleaning/0.0_data_cleaning_control.do) file.
 
-The `./src/` folder contains the Python code used to train and test various learning algorithms for our problem. This procedure can be completed by running the `./src/master.py` file.
+The [`./src/`](./src/) folder contains the Python code used to train and test various learning algorithms for our problem. This procedure can be completed by running the [`./src/master.py`](./src/master.py) file.
 
 
 ## Environment Setup using Anaconda and Bash terminal
